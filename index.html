@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة الأستاذة هبة التعليمية</title>
+    <style>
+        body {
+            font-family: 'Tahoma', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: #5d9cec;
+            color: white;
+            padding: 1rem 0;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        main {
+            padding: 20px;
+            max-width: 900px;
+            margin: 20px auto;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        section {
+            display: none; /* إخفاء جميع الأقسام مبدئيًا */
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        section.active-section {
+            display: block; /* إظهار القسم النشط فقط */
+        }
+
+        .dashboard-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #e9f2fa;
+            border-radius: 4px;
+        }
+
+        h2, h3, h4 {
+            color: #3a7bd5;
+        }
+
+        input[type="text"],
+        textarea {
+            width: calc(100% - 22px); /* Adjust for padding and border */
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box; /* Important for width calculation */
+        }
+
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        button {
+            background-color: #5d9cec;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px 0;
+        }
+
+        button:hover {
+            background-color: #3a7bd5;
+        }
+
+        #logout-button-teacher, #logout-button-student {
+            background-color: #e74c3c;
+            float: left; /* أو استخدم flexbox لتحديد الموضع */
+        }
+        #logout-button-teacher:hover, #logout-button-student:hover {
+            background-color: #c0392b;
+        }
+
+
+        .error-message {
+            color: red;
+            font-size: 0.9em;
+        }
+
+        #groups-list div, 
+        #students-list-teacher div, 
+        #posts-list-teacher .post-item,
+        #posts-list-student .post-item,
+        #leaderboard-teacher .leaderboard-entry,
+        #leaderboard-student .leaderboard-entry {
+            background-color: #fff;
+            border: 1px solid #eee;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 3px;
+        }
+        
+        #groups-list div button,
+        .student-entry button {
+             margin-left: 5px;
+             font-size: 0.9em;
+             padding: 5px 8px;
+        }
+
+        .post-item .post-meta, .post-item .post-actions {
+            font-size: 0.8em;
+            color: #777;
+            margin-top: 5px;
+        }
+        .post-item .post-actions button {
+            background-color: #f39c12;
+            padding: 5px 8px;
+            font-size: 0.9em;
+            margin-left: 5px;
+        }
+        .post-item .post-actions button:hover {
+            background-color: #e67e22;
+        }
+
+        .student-entry .points-controls button {
+            background-color: #2ecc71; /* Green for add */
+        }
+        .student-entry .points-controls button.decrease-points {
+            background-color: #e74c3c; /* Red for decrease */
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            background-color: #333;
+            color: white;
+            font-size: 0.9em;
+        }
+    </style>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js"></script>
+<script src="firebase-config.js"></script>
+<script src="main.js"></script>
+
+</head>
+<body>
+    <header>
+        <h1>منصة الأستاذة هبة التعليمية</h1>
+    </header>
+
+    <main>
+        <!-- قسم تسجيل الدخول (يظهر أولاً) -->
+        <section id="login-section" class="active-section">
+            <h2>تسجيل الدخول</h2>
+            <input type="text" id="login-code" placeholder="أدخل الكود الخاص بك">
+            <button id="login-button">دخول</button>
+            <p id="login-error" class="error-message"></p>
+        </section>
+
+        <!-- قسم لوحة تحكم المعلمة (مخفي مبدئيًا) -->
+        <section id="teacher-dashboard" class="dashboard">
+            <h2 id="teacher-welcome"></h2>
+            <button id="logout-button-teacher">تسجيل الخروج</button>
+
+            <div class="dashboard-section">
+                <h3>إدارة المجموعات</h3>
+                <input type="text" id="new-group-name" placeholder="اسم المجموعة الجديدة">
+                <button id="create-group-button">إنشاء مجموعة</button>
+                <div id="groups-list">
+                    <!-- سيتم ملء المجموعات هنا بواسطة JavaScript -->
+                </div>
+            </div>
+
+            <div id="selected-group-teacher-view" class="dashboard-section" style="display:none;">
+                <h4 id="current-group-name-teacher"></h4>
+                <button id="back-to-groups-teacher">العودة للمجموعات</button>
+
+                <h4>إدارة الطلاب</h4>
+                <input type="text" id="new-student-name" placeholder="اسم الطالب الجديد">
+                <button id="add-student-button">إضافة طالب وإنشاء كود</button>
+                <div id="students-list-teacher">
+                    <!-- قائمة الطلاب في المجموعة المختارة -->
+                </div>
+
+                <h4>إدارة المنشورات</h4>
+                <textarea id="new-post-content" placeholder="اكتب منشورك هنا..."></textarea>
+                <button id="create-post-button">نشر</button>
+                <div id="posts-list-teacher">
+                    <!-- قائمة المنشورات في المجموعة المختارة -->
+                </div>
+                
+                <h4>لوحة المتصدرين (المجموعة)</h4>
+                <div id="leaderboard-teacher">
+                    <!-- لوحة متصدرين المجموعة للمعلمة -->
+                </div>
+            </div>
+        </section>
+
+        <!-- قسم واجهة الطالب (مخفي مبدئيًا) -->
+        <section id="student-dashboard" class="dashboard">
+            <h2 id="student-welcome"></h2>
+            <button id="logout-button-student">تسجيل الخروج</button>
+
+            <div class="dashboard-section">
+                <h3 id="student-group-name"></h3>
+                <p>نقاطك الحالية: <span id="student-points">0</span></p>
+            </div>
+
+            <div class="dashboard-section">
+                <h3>المنشورات</h3>
+                <div id="posts-list-student">
+                    <!-- سيتم ملء المنشورات هنا بواسطة JavaScript -->
+                </div>
+            </div>
+            
+            <div class="dashboard-section">
+                <h3>لوحة المتصدرين</h3>
+                <div id="leaderboard-student">
+                    <!-- لوحة المتصدرين للطالب -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 منصة الأستاذة هبة التعليمية</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // ----- العناصر -----
+            const loginSection = document.getElementById('login-section');
+            const teacherDashboard = document.getElementById('teacher-dashboard');
+            const studentDashboard = document.getElementById('student-dashboard');
+
+            const loginCodeInput = document.getElementById('login-code');
+            const loginButton = document.getElementById('login-button');
+            const loginError = document.getElementById('login-error');
+
+            // عناصر المعلمة
+            const teacherWelcome = document.getElementById('teacher-welcome');
+            const logoutButtonTeacher = document.getElementById('logout-button-teacher');
+            const newGroupNameInput = document.getElementById('new-group-name');
+            const createGroupButton = document.getElementById('create-group-button');
+            const groupsListDiv = document.getElementById('groups-list');
+            
+            const selectedGroupTeacherView = document.getElementById('selected-group-teacher-view');
+            const currentGroupNameTeacher = document.getElementById('current-group-name-teacher');
+            const backToGroupsTeacherButton = document.getElementById('back-to-groups-teacher');
+            const newStudentNameInput = document.getElementById('new-student-name');
+            const addStudentButton = document.getElementById('add-student-button');
+            const studentsListTeacherDiv = document.getElementById('students-list-teacher');
+            const newPostContentTextarea = document.getElementById('new-post-content');
+            const createPostButton = document.getElementById('create-post-button');
+            const postsListTeacherDiv = document.getElementById('posts-list-teacher');
+            const leaderboardTeacherDiv = document.getElementById('leaderboard-teacher');
+
+
+            // عناصر الطالب
+            const studentWelcome = document.getElementById('student-welcome');
+            const logoutButtonStudent = document.getElementById('logout-button-student');
+            const studentGroupName = document.getElementById('student-group-name');
+            const studentPointsSpan = document.getElementById('student-points');
+            const postsListStudentDiv = document.getElementById('posts-list-student');
+            const leaderboardStudentDiv = document.getElementById('leaderboard-student');
+
+            // ----- بيانات المحاكاة (سيتم فقدانها عند تحديث الصفحة) -----
+            let teacherCode = "HEBA 005";
+            let data = loadData(); 
+
+            function getDefaultData() {
+                return {
+                    groups: [], // { id: 1, name: "الصف الأول أ" }
+                    students: [], // { id: 1, name: "أحمد", code: "S001", groupId: 1, points: 0 }
+                    posts: [], // { id: 1, groupId: 1, content: "مرحباً بالجميع", timestamp: "2023-10-27 10:00" }
+                    nextGroupId: 1,
+                    nextStudentId: 1,
+                    nextPostId: 1
+                };
+            }
+
+            function saveData() {
+                try {
+                    localStorage.setItem('educationalPlatformData_Heba005', JSON.stringify(data));
+                } catch (e) {
+                    console.error("Error saving to localStorage", e);
+                    // يمكنك هنا إعلام المستخدم بأن الحفظ قد فشل بسبب امتلاء المساحة مثلاً
+                }
+            }
+
+            function loadData() {
+                try {
+                    const storedData = localStorage.getItem('educationalPlatformData_Heba005');
+                    if (storedData) {
+                        const parsedData = JSON.parse(storedData);
+                        // تأكد من وجود المفاتيح الأساسية وإلا استخدم الافتراضي
+                        return {
+                            groups: parsedData.groups || [],
+                            students: parsedData.students || [],
+                            posts: parsedData.posts || [],
+                            nextGroupId: parsedData.nextGroupId || 1,
+                            nextStudentId: parsedData.nextStudentId || 1,
+                            nextPostId: parsedData.nextPostId || 1,
+                        };
+                    }
+                } catch (e) {
+                    console.error("Error loading from localStorage", e);
+                }
+                return getDefaultData(); // إذا فشل التحميل أو لا توجد بيانات
+            }
+            
+
+            let currentLoggedInUser = null; // 'teacher' or 'student'
+            let currentStudent = null; 
+            let currentSelectedGroupIdForTeacher = null;
+
+            // ----- وظائف عامة -----
+            function showSection(sectionId) {
+                loginSection.classList.remove('active-section');
+                teacherDashboard.classList.remove('active-section');
+                studentDashboard.classList.remove('active-section');
+                
+                selectedGroupTeacherView.style.display = 'none'; 
+
+                const sectionToShow = document.getElementById(sectionId);
+                if (sectionToShow) {
+                    sectionToShow.classList.add('active-section');
+                }
+            }
+
+            function generateUniqueCode(prefix = "S", length = 3) {
+                let code;
+                let isUnique = false;
+                let attempts = 0; // لمنع حلقة لا نهائية إذا امتلأت الأكواد الممكنة
+                while(!isUnique && attempts < 1000) { // 1000 محاولة كحد أقصى
+                    const num = String(Math.floor(Math.random() * Math.pow(10, length))).padStart(length, '0');
+                    code = prefix + num;
+                    isUnique = !data.students.find(s => s.code === code);
+                    attempts++;
+                }
+                if (!isUnique) { // إذا فشل توليد كود فريد بعد عدة محاولات
+                    console.error("Failed to generate a unique student code.");
+                    return prefix + Date.now().toString().slice(-length); // كود احتياطي
+                }
+                return code;
+            }
+
+            function formatDate(dateObj) { // يستقبل كائن Date
+                return dateObj.toLocaleString('ar-EG', {
+                    year: 'numeric', month: 'long', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+            }
+
+            // ----- منطق تسجيل الدخول -----
+            loginButton.addEventListener('click', () => {
+                const code = loginCodeInput.value.trim().toUpperCase();
+                loginError.textContent = '';
+
+                if (code === teacherCode) {
+                    currentLoggedInUser = 'teacher';
+                    showSection('teacher-dashboard');
+                    renderTeacherDashboard();
+                } else {
+                    const student = data.students.find(s => s.code === code);
+                    if (student) {
+                        currentLoggedInUser = 'student';
+                        currentStudent = student;
+                        showSection('student-dashboard');
+                        renderStudentDashboard();
+                    } else {
+                        loginError.textContent = 'الكود غير صحيح. الرجاء المحاولة مرة أخرى.';
+                    }
+                }
+                loginCodeInput.value = ''; 
+            });
+
+            function logout() {
+                currentLoggedInUser = null;
+                currentStudent = null;
+                currentSelectedGroupIdForTeacher = null;
+                showSection('login-section');
+                
+                groupsListDiv.innerHTML = '';
+                studentsListTeacherDiv.innerHTML = '';
+                postsListTeacherDiv.innerHTML = '';
+                leaderboardTeacherDiv.innerHTML = '';
+                postsListStudentDiv.innerHTML = '';
+                leaderboardStudentDiv.innerHTML = '';
+            }
+            logoutButtonTeacher.addEventListener('click', logout);
+            logoutButtonStudent.addEventListener('click', logout);
+
+
+            // ----- منطق لوحة تحكم المعلمة -----
+            function renderTeacherDashboard() {
+                teacherWelcome.textContent = `مرحباً أستاذة هبة!`;
+                renderGroupsList();
+                if(currentSelectedGroupIdForTeacher){
+                    renderSelectedGroupViewForTeacher(currentSelectedGroupIdForTeacher);
+                } else {
+                    selectedGroupTeacherView.style.display = 'none';
+                }
+            }
+
+            createGroupButton.addEventListener('click', () => {
+                const groupName = newGroupNameInput.value.trim();
+                if (groupName) {
+                    data.groups.push({ id: data.nextGroupId++, name: groupName });
+                    newGroupNameInput.value = '';
+                    renderGroupsList();
+                    saveData();
+                }
+            });
+
+            function renderGroupsList() {
+                groupsListDiv.innerHTML = '<h4>قائمة المجموعات:</h4>';
+                if (data.groups.length === 0) {
+                    groupsListDiv.innerHTML += '<p>لا توجد مجموعات حالياً. قم بإنشاء مجموعة جديدة.</p>';
+                    return;
+                }
+                data.groups.forEach(group => {
+                    const groupDiv = document.createElement('div');
+                    groupDiv.innerHTML = `
+                        <span>${group.name}</span>
+                        <button data-group-id="${group.id}" class="view-group-details">عرض التفاصيل</button>
+                        <button data-group-id="${group.id}" class="delete-group">حذف المجموعة</button>
+                    `;
+                    groupsListDiv.appendChild(groupDiv);
+                });
+
+                groupsListDiv.querySelectorAll('.view-group-details').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const groupId = parseInt(e.target.dataset.groupId);
+                        currentSelectedGroupIdForTeacher = groupId;
+                        renderSelectedGroupViewForTeacher(groupId);
+                    });
+                });
+                groupsListDiv.querySelectorAll('.delete-group').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const groupId = parseInt(e.target.dataset.groupId);
+                        if (confirm("هل أنت متأكد من حذف هذه المجموعة وكل ما يتعلق بها من طلاب ومنشورات؟")) {
+                            deleteGroup(groupId);
+                        }
+                    });
+                });
+            }
+
+            function deleteGroup(groupId) {
+                data.groups = data.groups.filter(g => g.id !== groupId);
+                data.students = data.students.filter(s => s.groupId !== groupId);
+                data.posts = data.posts.filter(p => p.groupId !== groupId);
+                if (currentSelectedGroupIdForTeacher === groupId) {
+                    currentSelectedGroupIdForTeacher = null;
+                    selectedGroupTeacherView.style.display = 'none';
+                }
+                renderGroupsList();
+                saveData();
+            }
+
+            backToGroupsTeacherButton.addEventListener('click', () => {
+                currentSelectedGroupIdForTeacher = null;
+                selectedGroupTeacherView.style.display = 'none';
+                renderGroupsList(); 
+            });
+
+            function renderSelectedGroupViewForTeacher(groupId) {
+                const group = data.groups.find(g => g.id === groupId);
+                if (!group) {
+                    selectedGroupTeacherView.style.display = 'none'; // إذا لم يتم العثور على المجموعة
+                    return;
+                }
+
+                currentSelectedGroupIdForTeacher = groupId;
+                selectedGroupTeacherView.style.display = 'block';
+                currentGroupNameTeacher.textContent = `تفاصيل المجموعة: ${group.name}`;
+                
+                renderStudentsListForTeacher(groupId);
+                renderPostsListForTeacher(groupId);
+                renderLeaderboardForTeacher(groupId);
+            }
+            
+            addStudentButton.addEventListener('click', () => {
+                if (!currentSelectedGroupIdForTeacher) return;
+                const studentName = newStudentNameInput.value.trim();
+                if (studentName) {
+                    const studentCode = generateUniqueCode();
+                    data.students.push({
+                        id: data.nextStudentId++,
+                        name: studentName,
+                        code: studentCode,
+                        groupId: currentSelectedGroupIdForTeacher,
+                        points: 0
+                    });
+                    newStudentNameInput.value = '';
+                    renderStudentsListForTeacher(currentSelectedGroupIdForTeacher);
+                    renderLeaderboardForTeacher(currentSelectedGroupIdForTeacher); // تحديث لوحة المتصدرين
+                    saveData();
+                }
+            });
+
+            function renderStudentsListForTeacher(groupId) {
+                studentsListTeacherDiv.innerHTML = '<h5>الطلاب في هذه المجموعة:</h5>';
+                const groupStudents = data.students.filter(s => s.groupId === groupId);
+                if (groupStudents.length === 0) {
+                    studentsListTeacherDiv.innerHTML += '<p>لا يوجد طلاب في هذه المجموعة بعد.</p>';
+                    return;
+                }
+                groupStudents.forEach(student => {
+                    const studentDiv = document.createElement('div');
+                    studentDiv.classList.add('student-entry');
+                    studentDiv.innerHTML = `
+                        <span>${student.name} (الكود: ${student.code}) - النقاط: ${student.points}</span>
+                        <span class="points-controls">
+                            <button data-student-id="${student.id}" class="increase-points">+1 نقطة</button>
+                            <button data-student-id="${student.id}" class="decrease-points">-1 نقطة</button>
+                        </span>
+                        <button data-student-id="${student.id}" class="delete-student">حذف الطالب</button>
+                        <select data-student-id="${student.id}" class="move-student-group">
+                            <option value="">نقل إلى...</option>
+                            ${data.groups.filter(g => g.id !== groupId).map(g => `<option value="${g.id}">${g.name}</option>`).join('')}
+                        </select>
+                    `;
+                    studentsListTeacherDiv.appendChild(studentDiv);
+                });
+
+                studentsListTeacherDiv.querySelectorAll('.increase-points').forEach(button => {
+                    button.addEventListener('click', (e) => modifyPoints(parseInt(e.target.dataset.studentId), 1));
+                });
+                studentsListTeacherDiv.querySelectorAll('.decrease-points').forEach(button => {
+                    button.addEventListener('click', (e) => modifyPoints(parseInt(e.target.dataset.studentId), -1));
+                });
+                studentsListTeacherDiv.querySelectorAll('.delete-student').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        if (confirm("هل أنت متأكد من حذف هذا الطالب؟")) {
+                            deleteStudent(parseInt(e.target.dataset.studentId));
+                        }
+                    });
+                });
+                studentsListTeacherDiv.querySelectorAll('.move-student-group').forEach(select => {
+                    select.addEventListener('change', (e) => {
+                        const studentId = parseInt(e.target.dataset.studentId);
+                        const newGroupId = parseInt(e.target.value);
+                        if (newGroupId) {
+                            if (confirm(`هل أنت متأكد من نقل الطالب إلى المجموعة الجديدة؟`)) {
+                                moveStudent(studentId, newGroupId);
+                            } else {
+                                e.target.value = ""; // إعادة التحديد إلى "نقل إلى..."
+                            }
+                        }
+                    });
+                });
+            }
+            
+            function deleteStudent(studentId) {
+                data.students = data.students.filter(s => s.id !== studentId);
+                if (currentSelectedGroupIdForTeacher) {
+                    renderStudentsListForTeacher(currentSelectedGroupIdForTeacher);
+                    renderLeaderboardForTeacher(currentSelectedGroupIdForTeacher);
+                }
+                saveData();
+            }
+
+            function moveStudent(studentId, newGroupId) {
+                const student = data.students.find(s => s.id === studentId);
+                if (student) {
+                    student.groupId = newGroupId;
+                    if (currentSelectedGroupIdForTeacher) {
+                        renderStudentsListForTeacher(currentSelectedGroupIdForTeacher); 
+                        renderLeaderboardForTeacher(currentSelectedGroupIdForTeacher);
+                    }
+                    saveData();
+                    alert(`تم نقل الطالب ${student.name} بنجاح.`);
+                }
+            }
+
+            function modifyPoints(studentId, amount) {
+                const student = data.students.find(s => s.id === studentId);
+                if (student) {
+                    student.points += amount;
+                    if (student.points < 0) student.points = 0; 
+                    renderStudentsListForTeacher(currentSelectedGroupIdForTeacher);
+                    renderLeaderboardForTeacher(currentSelectedGroupIdForTeacher);
+                    // إذا كان الطالب المسجل هو من تم تعديل نقاطه، قم بتحديث واجهته أيضًا
+                    if (currentLoggedInUser === 'student' && currentStudent && currentStudent.id === studentId) {
+                        renderStudentDashboard();
+                    }
+                    saveData();
+                }
+            }
+
+            createPostButton.addEventListener('click', () => {
+                if (!currentSelectedGroupIdForTeacher) return;
+                const content = newPostContentTextarea.value.trim();
+                if (content) {
+                    data.posts.push({
+                        id: data.nextPostId++,
+                        groupId: currentSelectedGroupIdForTeacher,
+                        content: content,
+                        timestamp: formatDate(new Date()) // استخدام كائن Date هنا
+                    });
+                    newPostContentTextarea.value = '';
+                    renderPostsListForTeacher(currentSelectedGroupIdForTeacher);
+                    saveData();
+                }
+            });
+
+            function renderPostsListForTeacher(groupId) {
+                postsListTeacherDiv.innerHTML = '<h5>المنشورات في هذه المجموعة:</h5>';
+                // تحويل timestamp المخزنة كسلسلة نصية إلى كائنات Date للمقارنة الصحيحة
+                const groupPosts = data.posts
+                    .filter(p => p.groupId === groupId)
+                    .sort((a,b) => new Date(a.timestamp.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$2/$1/$3')) < new Date(b.timestamp.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$2/$1/$3')) ? 1 : -1); // الأحدث أولاً، مع محاولة تصحيح تنسيق التاريخ للمقارنة
+                
+                if (groupPosts.length === 0) {
+                    postsListTeacherDiv.innerHTML += '<p>لا توجد منشورات في هذه المجموعة بعد.</p>';
+                    return;
+                }
+                groupPosts.forEach(post => {
+                    const postDiv = document.createElement('div');
+                    postDiv.classList.add('post-item');
+                    postDiv.innerHTML = `
+                        <p>${post.content}</p>
+                        <div class="post-meta">نشر في: ${post.timestamp}</div>
+                        <div class="post-actions">
+                            <button data-post-id="${post.id}" class="delete-post">حذف المنشور</button>
+                        </div>
+                    `;
+                    postsListTeacherDiv.appendChild(postDiv);
+                });
+
+                postsListTeacherDiv.querySelectorAll('.delete-post').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        if(confirm("هل أنت متأكد من حذف هذا المنشور؟")) {
+                            deletePost(parseInt(e.target.dataset.postId));
+                        }
+                    });
+                });
+            }
+
+            function deletePost(postId) {
+                data.posts = data.posts.filter(p => p.id !== postId);
+                if (currentSelectedGroupIdForTeacher) {
+                    renderPostsListForTeacher(currentSelectedGroupIdForTeacher);
+                }
+                saveData();
+            }
+
+            function renderLeaderboardForTeacher(groupId) {
+                leaderboardTeacherDiv.innerHTML = '<h6>لوحة المتصدرين للمجموعة:</h6>';
+                const groupStudents = data.students.filter(s => s.groupId === groupId)
+                                                .sort((a, b) => b.points - a.points); 
+                
+                if (groupStudents.length === 0) {
+                    leaderboardTeacherDiv.innerHTML += '<p>لا يوجد طلاب لعرضهم في لوحة المتصدرين.</p>';
+                    return;
+                }
+                const ol = document.createElement('ol');
+                groupStudents.forEach(student => {
+                    const li = document.createElement('li');
+                    li.classList.add('leaderboard-entry');
+                    li.textContent = `${student.name}: ${student.points} نقطة`;
+                    ol.appendChild(li);
+                });
+                leaderboardTeacherDiv.appendChild(ol);
+            }
+
+
+            // ----- منطق واجهة الطالب -----
+            function renderStudentDashboard() {
+                if (!currentStudent) return;
+                const group = data.groups.find(g => g.id === currentStudent.groupId);
+                
+                studentWelcome.textContent = `مرحباً ${currentStudent.name}!`;
+                studentGroupName.textContent = `أنت في المجموعة: ${group ? group.name : 'غير محدد'}`;
+                studentPointsSpan.textContent = currentStudent.points;
+
+                renderPostsListForStudent(currentStudent.groupId);
+                renderLeaderboardForStudent(currentStudent.groupId);
+            }
+
+            function renderPostsListForStudent(groupId) {
+                postsListStudentDiv.innerHTML = '';
+                const groupPosts = data.posts
+                    .filter(p => p.groupId === groupId)
+                    .sort((a,b) => new Date(a.timestamp.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$2/$1/$3')) < new Date(b.timestamp.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$2/$1/$3')) ? 1 : -1); // الأحدث أولاً
+
+                if (groupPosts.length === 0) {
+                    postsListStudentDiv.innerHTML = '<p>لا توجد منشورات لعرضها حالياً.</p>';
+                    return;
+                }
+                groupPosts.forEach(post => {
+                    const postDiv = document.createElement('div');
+                    postDiv.classList.add('post-item');
+                    postDiv.innerHTML = `
+                        <p>${post.content}</p>
+                        <div class="post-meta">نشر في: ${post.timestamp}</div>
+                    `;
+                    postsListStudentDiv.appendChild(postDiv);
+                });
+            }
+
+            function renderLeaderboardForStudent(groupId) {
+                leaderboardStudentDiv.innerHTML = '';
+                const groupStudents = data.students.filter(s => s.groupId === groupId)
+                                                .sort((a, b) => b.points - a.points);
+                
+                if (groupStudents.length === 0) {
+                    leaderboardStudentDiv.innerHTML = '<p>لا يوجد طلاب في هذه المجموعة بعد.</p>';
+                    return;
+                }
+                const ol = document.createElement('ol');
+                groupStudents.forEach(student => {
+                    const li = document.createElement('li');
+                    li.classList.add('leaderboard-entry');
+                    li.textContent = `${student.name}: ${student.points} نقطة`;
+                    if (student.id === currentStudent.id) {
+                        li.style.fontWeight = 'bold'; 
+                        li.style.color = '#3a7bd5';
+                    }
+                    ol.appendChild(li);
+                });
+                leaderboardStudentDiv.appendChild(ol);
+            }
+
+            // ----- التشغيل الأولي -----
+            showSection('login-section'); 
+        });
+    </script>
+</body>
+</html>
