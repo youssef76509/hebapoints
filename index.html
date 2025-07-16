@@ -149,6 +149,141 @@
             font-size: 0.9em;
         }
     </style>
+// ✅ إعداد Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyDiyDj0aHLWO5L4H0zwOyRmZwri-prxF_0",
+  authDomain: "bambozo-game-d5db9.firebaseapp.com",
+  projectId: "bambozo-game-d5db9",
+  storageBucket: "bambozo-game-d5db9.appspot.com",
+  messagingSenderId: "1005908026184",
+  appId: "1:1005908026184:web:974b5f93864d42c91fc97d"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ✅ كود المعلمة
+const teacherCode = "NERMEEN 005";
+
+document.addEventListener("DOMContentLoaded", () => {
+  const loginSection = document.getElementById("login-section");
+  const dashboard = document.getElementById("dashboard");
+  const loginBtn = document.getElementById("login-btn");
+  const loginInput = document.getElementById("login-code");
+  const groupInput = document.getElementById("group-name");
+  const createGroupBtn = document.getElementById("create-group-btn");
+  const groupList = document.getElementById("group-list");
+
+  // ✅ إخفاء الداشبورد في البداية
+  dashboard.style.display = "none";
+
+  // ✅ تسجيل الدخول
+  loginBtn.addEventListener("click", () => {
+    const code = loginInput.value.trim().toLowerCase();
+    if (code === teacherCode.toLowerCase()) {
+      loginSection.style.display = "none";
+      dashboard.style.display = "block";
+      loadGroups();
+    } else {
+      alert("🚫 دخول غير مصرح به!");
+    }
+  });
+
+  // ✅ إنشاء مجموعة
+  createGroupBtn.addEventListener("click", async () => {
+    const groupName = groupInput.value.trim();
+    if (!groupName) return;
+
+    const groupRef = db.collection("groups");
+    const existing = await groupRef.where("name", "==", groupName).get();
+    if (!existing.empty) return;
+
+    await groupRef.add({ name: groupName });
+    groupInput.value = "";
+    loadGroups();
+  });
+
+  // ✅ تحميل كل المجموعات
+  async function loadGroups() {
+    groupList.innerHTML = "⏳ جاري التحميل...";
+    const snapshot = await db.collection("groups").get();
+    groupList.innerHTML = "";
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const div = document.createElement("div");
+      div.className = "group-card";
+      div.innerHTML = `
+        <h4>📘 ${data.name}</h4>
+        <button onclick="viewGroup('${doc.id}', '${data.name}')">عرض التفاصيل</button>
+        <button onclick="deleteGroup('${doc.id}')">🗑 حذف</button>
+      `;
+      groupList.appendChild(div);
+    });
+  }
+
+  // ✅ حذف مجموعة
+  window.deleteGroup = async function (groupId) {
+    if (!confirm("هل تريد حذف المجموعة؟")) return;
+    await db.collection("groups").doc(groupId).delete();
+    const students = await db.collection("students").where("groupId", "==", groupId).get();
+    const batch = db.batch();
+    students.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+    loadGroups();
+  };
+
+  // ✅ عرض التفاصيل
+  window.viewGroup = async function (groupId, groupName) {
+    const section = document.getElementById("group-details");
+    section.style.display = "block";
+    document.getElementById("group-title").textContent = `تفاصيل المجموعة: ${groupName}`;
+    section.setAttribute("data-group-id", groupId);
+    loadStudents(groupId);
+  };
+
+  // ✅ إضافة طالب
+  const addStudentBtn = document.getElementById("add-student-btn");
+  const studentNameInput = document.getElementById("student-name");
+  const studentList = document.getElementById("student-list");
+
+  addStudentBtn.addEventListener("click", async () => {
+    const name = studentNameInput.value.trim();
+    const groupId = document.getElementById("group-details").getAttribute("data-group-id");
+    if (!name || !groupId) return;
+
+    const code = "S" + Math.floor(10000 + Math.random() * 90000);
+    await db.collection("students").add({ name, groupId, points: 0, code });
+    studentNameInput.value = "";
+    loadStudents(groupId);
+  });
+
+  // ✅ عرض الطلاب داخل مجموعة
+  async function loadStudents(groupId) {
+    studentList.innerHTML = "⏳ جاري التحميل...";
+    const snapshot = await db.collection("students").where("groupId", "==", groupId).get();
+    studentList.innerHTML = "";
+    snapshot.forEach(doc => {
+      const student = doc.data();
+      const div = document.createElement("div");
+      div.className = "student-card";
+      div.innerHTML = `
+        👤 ${student.name} | كود الطالب: ${student.code} | 🌟 نقاط: ${student.points}
+        <button onclick="adjustPoints('${doc.id}', 1)">+1</button>
+        <button onclick="adjustPoints('${doc.id}', -1)">-1</button>
+      `;
+      studentList.appendChild(div);
+    });
+  }
+
+  // ✅ تعديل نقاط
+  window.adjustPoints = async function (studentId, change) {
+    const studentRef = db.collection("students").doc(studentId);
+    const student = await studentRef.get();
+    const points = (student.data().points || 0) + change;
+    await studentRef.update({ points });
+    const groupId = document.getElementById("group-details").getAttribute("data-group-id");
+    loadStudents(groupId);
+  };
+});
 
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js"></script>
@@ -238,19 +373,7 @@
     <footer>
         <p>&copy; 2023 منصة الأستاذة هبة التعليمية</p>
     </footer>
-// ✅ إعداد Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyDiyDj0aHLWO5L4H0zwOyRmZwri-prxF_0",
-  authDomain: "bambozo-game-d5db9.firebaseapp.com",
-  projectId: "bambozo-game-d5db9",
-  storageBucket: "bambozo-game-d5db9.appspot.com",
-  messagingSenderId: "1005908026184",
-  appId: "1:1005908026184:web:974b5f93864d42c91fc97d"
-};
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const storage = firebase.storage();
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // ----- العناصر -----
