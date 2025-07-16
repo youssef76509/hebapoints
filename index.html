@@ -238,7 +238,19 @@
     <footer>
         <p>&copy; 2023 منصة الأستاذة هبة التعليمية</p>
     </footer>
+// ✅ إعداد Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyDiyDj0aHLWO5L4H0zwOyRmZwri-prxF_0",
+  authDomain: "bambozo-game-d5db9.firebaseapp.com",
+  projectId: "bambozo-game-d5db9",
+  storageBucket: "bambozo-game-d5db9.appspot.com",
+  messagingSenderId: "1005908026184",
+  appId: "1:1005908026184:web:974b5f93864d42c91fc97d"
+};
 
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const storage = firebase.storage();
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // ----- العناصر -----
